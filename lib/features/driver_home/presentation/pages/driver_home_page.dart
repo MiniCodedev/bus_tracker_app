@@ -69,73 +69,86 @@ class _DriverHomePageState extends State<DriverHomePage> {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     return Scaffold(
-      body: Card(
-        color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Text(
-                    isOnline ? "If you go offline" : "Go online",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: width / 30),
-                  ),
-                  const SizedBox(
-                    width: 5,
-                  ),
-                  Icon(
-                    !isOnline
-                        ? Icons.toggle_on_rounded
-                        : Icons.toggle_off_rounded,
-                    color: !isOnline ? AppColors.primaryColor : null,
-                  ),
-                  const SizedBox(
-                    width: 5,
-                  ),
-                  Text(
-                    isOnline
-                        ? "you don't share the location."
-                        : "to share location.",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: width / 30),
-                  )
-                ],
-              ),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    isOnline ? "Online" : "offline",
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 17),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      if (isOnline) {
-                        setState(() {
-                          isOnline = false;
-                        });
-                      } else {
-                        setState(() {
-                          isOnline = true;
-                        });
-                      }
-                    },
-                    child: Icon(
-                      isOnline
-                          ? Icons.toggle_on_rounded
-                          : Icons.toggle_off_rounded,
-                      size: 50,
-                      color: isOnline ? AppColors.primaryColor : null,
+      appBar: AppBar(
+        title: Text("Bus Tracker",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.primaryColor,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Column(
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          isOnline ? "If you go offline" : "Go online",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: width / 30),
+                        ),
+                        const SizedBox(
+                          width: 5,
+                        ),
+                        Icon(
+                          !isOnline
+                              ? Icons.toggle_on_rounded
+                              : Icons.toggle_off_rounded,
+                          color: !isOnline ? AppColors.primaryColor : null,
+                        ),
+                        const SizedBox(
+                          width: 5,
+                        ),
+                        Text(
+                          isOnline
+                              ? "you don't share the location."
+                              : "to share location.",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: width / 30),
+                        )
+                      ],
                     ),
-                  )
-                ],
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isOnline ? "Online" : "offline",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 17),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            if (isOnline) {
+                              setState(() {
+                                isOnline = false;
+                              });
+                            } else {
+                              setState(() {
+                                isOnline = true;
+                              });
+                            }
+                          },
+                          child: Icon(
+                            isOnline
+                                ? Icons.toggle_on_rounded
+                                : Icons.toggle_off_rounded,
+                            size: 50,
+                            color: isOnline ? AppColors.primaryColor : null,
+                          ),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
