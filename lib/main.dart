@@ -1,3 +1,4 @@
+import 'package:bus_tracker_app/features/auth/presentation/pages/auth_page.dart';
 import 'package:bus_tracker_app/features/driver_home/presentation/pages/driver_home_page.dart';
 import 'package:bus_tracker_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const DriverHomePage(),
+      home: const AuthPage(),
       theme: AppTheme.lightTheme,
     );
   }
