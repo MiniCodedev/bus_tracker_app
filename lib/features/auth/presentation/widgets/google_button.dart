@@ -24,7 +24,7 @@ class GoogleButton extends StatelessWidget {
           children: [
             SvgPicture.asset(AppSvg.googleSvg),
             SizedBox(
-              width: 15,
+              width: 10,
             ),
             Text("Continue with Google")
           ],
