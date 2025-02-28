@@ -28,7 +28,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     result.fold(
       (failure) => emit(AuthFailure(failure.message)),
       (driverUserModel) {
-        appUserCubit.setUser(null, driverUserModel);
+        if (driverUserModel.name == "admin") {
+          appUserCubit.setUser(null, null, isAdmin: true);
+        } else {
+          appUserCubit.setUser(null, driverUserModel);
+        }
       },
     );
   }

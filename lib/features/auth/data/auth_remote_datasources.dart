@@ -47,13 +47,17 @@ class AuthRemoteDataSource {
       if (credential.user == null) {
         throw ServerException('Error signing in with email: User not found');
       }
-      if (email == "admin@jpr.com") {
+      if (email != "admin@jpr.com") {
         DriverUserModel userModel =
             await databaseRemoteDatasources.getUserByUid(credential.user!.uid);
         return userModel;
       }
       return DriverUserModel(
-          uid: 'uid', name: "name", email: email, busNo: 0, phoneNo: "phoneNo");
+          uid: credential.user!.uid,
+          name: "admin",
+          email: email,
+          busNo: 0,
+          phoneNo: "phoneNo");
     } on ServerException catch (e) {
       throw ServerException('Error signing in with email: ${e.message}');
     } catch (e) {

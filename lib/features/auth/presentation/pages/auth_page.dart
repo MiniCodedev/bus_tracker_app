@@ -76,7 +76,7 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                     BasicField(
                       hintText: "Password",
-                      icon: Icons.password_rounded,
+                      icon: Icons.lock_rounded,
                       controller: passwordController,
                       isobscureText: true,
                     ),
