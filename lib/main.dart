@@ -1,5 +1,7 @@
 import 'package:bus_tracker_app/core/cubit/app_user/app_user_cubit.dart';
 import 'package:bus_tracker_app/core/data/database_remote_datasources.dart';
+import 'package:bus_tracker_app/features/admin_home/domain/admin_repository.dart';
+import 'package:bus_tracker_app/features/admin_home/presentation/bloc/admin_bloc.dart';
 import 'package:bus_tracker_app/features/admin_home/presentation/pages/admin_home_page.dart';
 import 'package:bus_tracker_app/features/auth/data/auth_remote_datasources.dart';
 import 'package:bus_tracker_app/features/auth/domain/auth_repository.dart';
@@ -24,6 +26,8 @@ void main() async {
       databaseRemoteDatasources: databaseRemoteDatasources);
   final AuthRepository authRepository =
       AuthRepository(authRemoteDataSource: authRemoteDataSource);
+  final AdminRepository adminRepository =
+      AdminRepository(databaseRemoteDatasources: databaseRemoteDatasources);
   final AppUserCubit appUserCubit = AppUserCubit();
   runApp(MultiBlocProvider(
     providers: [
@@ -33,6 +37,9 @@ void main() async {
       BlocProvider<AuthBloc>(
         create: (context) => AuthBloc(
             authRepository: authRepository, appUserCubit: appUserCubit),
+      ),
+      BlocProvider<AdminBloc>(
+        create: (context) => AdminBloc(adminRepository: adminRepository),
       ),
     ],
     child: const MyApp(),
@@ -58,9 +65,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: BlocConsumer<AppUserCubit, AppUserState>(
-        listener: (context, state) {
-          // TODO: implement listener
-        },
+        listener: (context, state) {},
         builder: (context, state) {
           if (state is AppUserAdminLoggedin) {
             return AdminHomePage();

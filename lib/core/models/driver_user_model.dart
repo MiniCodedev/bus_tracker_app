@@ -7,6 +7,7 @@ class DriverUserModel {
   final String email;
   final int busNo;
   final String phoneNo;
+  final String password;
 
   DriverUserModel({
     required this.uid,
@@ -14,6 +15,7 @@ class DriverUserModel {
     required this.email,
     required this.busNo,
     required this.phoneNo,
+    required this.password,
   });
 
   DriverUserModel copyWith({
@@ -22,6 +24,7 @@ class DriverUserModel {
     String? email,
     int? busNo,
     String? phoneNo,
+    String? password,
   }) {
     return DriverUserModel(
       uid: uid ?? this.uid,
@@ -29,6 +32,7 @@ class DriverUserModel {
       email: email ?? this.email,
       busNo: busNo ?? this.busNo,
       phoneNo: phoneNo ?? this.phoneNo,
+      password: password ?? this.password,
     );
   }
 
@@ -39,6 +43,7 @@ class DriverUserModel {
       'email': email,
       'busNo': busNo,
       'phoneNo': phoneNo,
+      'password': password,
     };
   }
 
@@ -49,6 +54,7 @@ class DriverUserModel {
       email: map['email'] as String,
       busNo: map['busNo'] as int,
       phoneNo: map['phoneNo'] as String,
+      password: map['password'] as String,
     );
   }
 
@@ -59,7 +65,7 @@ class DriverUserModel {
 
   @override
   String toString() {
-    return 'DriverUserModel(uid: $uid, name: $name, email: $email, busNo: $busNo, phoneNo: $phoneNo)';
+    return 'DriverUserModel(uid: $uid, name: $name, email: $email, busNo: $busNo, phoneNo: $phoneNo, password: $password)';
   }
 
   @override
@@ -70,7 +76,8 @@ class DriverUserModel {
         other.name == name &&
         other.email == email &&
         other.busNo == busNo &&
-        other.phoneNo == phoneNo;
+        other.phoneNo == phoneNo &&
+        other.password == password;
   }
 
   @override
@@ -79,6 +86,7 @@ class DriverUserModel {
         name.hashCode ^
         email.hashCode ^
         busNo.hashCode ^
-        phoneNo.hashCode;
+        phoneNo.hashCode ^
+        password.hashCode;
   }
 }

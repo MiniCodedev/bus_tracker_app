@@ -57,7 +57,8 @@ class AuthRemoteDataSource {
           name: "admin",
           email: email,
           busNo: 0,
-          phoneNo: "phoneNo");
+          phoneNo: "phoneNo",
+          password: "");
     } on ServerException catch (e) {
       throw ServerException('Error signing in with email: ${e.message}');
     } catch (e) {
