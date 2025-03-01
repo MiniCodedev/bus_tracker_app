@@ -67,26 +67,4 @@ class DriverUserModel {
   String toString() {
     return 'DriverUserModel(uid: $uid, name: $name, email: $email, busNo: $busNo, phoneNo: $phoneNo, password: $password)';
   }
-
-  @override
-  bool operator ==(covariant DriverUserModel other) {
-    if (identical(this, other)) return true;
-
-    return other.uid == uid &&
-        other.name == name &&
-        other.email == email &&
-        other.busNo == busNo &&
-        other.phoneNo == phoneNo &&
-        other.password == password;
-  }
-
-  @override
-  int get hashCode {
-    return uid.hashCode ^
-        name.hashCode ^
-        email.hashCode ^
-        busNo.hashCode ^
-        phoneNo.hashCode ^
-        password.hashCode;
-  }
 }
