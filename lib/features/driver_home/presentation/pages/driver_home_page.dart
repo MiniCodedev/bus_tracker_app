@@ -226,23 +226,26 @@ class _DriverHomePageState extends State<DriverHomePage> {
                                 CameraUpdate.zoomOut(),
                               );
                             } else {
-                              setState(() {
-                                isOnline = true;
-                              });
-                              _mapController.animateCamera(
-                                CameraUpdate.newLatLngZoom(currentlatLng!, 18),
-                              );
-                              // Send initial location when the driver goes online
-                              _sendLocationUpdate();
+                              if (currentlatLng != null) {
+                                setState(() {
+                                  isOnline = true;
+                                });
+                                _mapController.animateCamera(
+                                  CameraUpdate.newLatLngZoom(
+                                      currentlatLng!, 18),
+                                );
+                                // Send initial location when the driver goes online
+                                _sendLocationUpdate();
 
-                              // Periodically update location every 5 seconds
-                              Timer.periodic(Duration(seconds: 5), (timer) {
-                                if (isOnline) {
-                                  _sendLocationUpdate();
-                                } else {
-                                  timer.cancel();
-                                }
-                              });
+                                // Periodically update location every 5 seconds
+                                Timer.periodic(Duration(seconds: 1), (timer) {
+                                  if (isOnline) {
+                                    _sendLocationUpdate();
+                                  } else {
+                                    timer.cancel();
+                                  }
+                                });
+                              }
                             }
                           },
                           child: Icon(
