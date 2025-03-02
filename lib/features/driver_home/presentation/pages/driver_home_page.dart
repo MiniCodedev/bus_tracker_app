@@ -2,12 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:bus_tracker_app/core/assets/app_img.dart';
 import 'package:bus_tracker_app/core/cubit/app_user/app_user_cubit.dart';
+import 'package:bus_tracker_app/core/secret/app_secret.dart';
 import 'package:bus_tracker_app/core/theme/app_colors.dart';
+import 'package:bus_tracker_app/core/utils/loader.dart';
+import 'package:bus_tracker_app/core/utils/show_snackbar.dart';
 import 'package:bus_tracker_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:location/location.dart' as locationService;
 import 'package:permission_handler/permission_handler.dart' as permission;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -20,128 +24,125 @@ class DriverHomePage extends StatefulWidget {
 
 class _DriverHomePageState extends State<DriverHomePage> {
   bool isOnline = false;
-  LatLng? currentlatLng;
+  LatLng? currentLatLng;
   late WebSocketChannel _channel;
-  late Location _location;
-  late StreamSubscription<LocationData> _locationSubscription;
-  late GoogleMapController _mapController;
-  BitmapDescriptor? busIcon;
-
-  // Connect to WebSocket server
-  void _connectToWebSocket() {
-    _channel = WebSocketChannel.connect(
-      Uri.parse("ws://192.168.199.215:3000"),
-    );
-  }
-
-  // Send location data to WebSocket server
-  void _sendLocationUpdate() {
-    if (currentlatLng != null) {
-      final message = jsonEncode({
-        'busId': context
-            .read<AppUserCubit>()
-            .driverUser!
-            .busNo, // Replace with actual bus ID
-        'lat': currentlatLng!.latitude,
-        'lng': currentlatLng!.longitude,
-      });
-      _channel.sink.add(message); // Send message to WebSocket server
-    }
-  }
-
-  void disconnectWebSocket() {
-    _channel.sink.close(); // Close the WebSocket connection
-    print("WebSocket connection closed");
-  }
-
-  // Get and listen for location updates
-  void getLocation() async {
-    _location = Location();
-
-    bool serviceEnabled;
-    PermissionStatus permissionGranted;
-
-    serviceEnabled = await _location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await _location.requestService();
-      if (!serviceEnabled) {
-        return;
-      }
-    }
-
-    permissionGranted = await _location.hasPermission();
-    if (permissionGranted == PermissionStatus.denied) {
-      permissionGranted = await _location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
-
-    _locationSubscription = _location.onLocationChanged.listen(
-      (LocationData event) {
-        if (event.latitude != null && event.longitude != null) {
-          setState(() {
-            currentlatLng = LatLng(event.latitude!, event.longitude!);
-            // If the map controller is initialized, move camera to the new location
-            _mapController.animateCamera(
-              CameraUpdate.newLatLng(currentlatLng!),
-            );
-          });
-        }
-      },
-    );
-  }
+  StreamSubscription<Position>? _positionStream;
+  GoogleMapController? _mapController;
+  bool isPermissionGranted = true;
 
   @override
   void initState() {
     super.initState();
-    getIcon();
     _requestLocationPermission();
-    getLocation();
-    _connectToWebSocket(); // Connect to the WebSocket server
-  }
-
-  Future<void> _requestLocationPermission() async {
-    permission.PermissionStatus status =
-        await permission.Permission.location.request();
-    if (status.isDenied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Location permission denied!")),
-      );
-    }
+    _connectToWebSocket();
   }
 
   @override
   void dispose() {
-    _locationSubscription.cancel(); // Cancel location subscription
-    _channel.sink.close(); // Close the WebSocket connection
+    _positionStream?.cancel();
+    _channel.sink.close();
     super.dispose();
   }
 
-  getIcon() async {
-    final icon = AssetMapBitmap(AppImg.busIcon);
-    setState(() {
-      busIcon = icon;
+  // Request location permission
+  Future<void> _requestLocationPermission() async {
+    permission.PermissionStatus status =
+        await permission.Permission.location.request();
+    if (status.isDenied) {
+      showSnackBar(context: context, text: "Location permission denied!");
+      return;
+    }
+    getLocationUpdates();
+  }
+
+  // Connect to WebSocket
+  void _connectToWebSocket() {
+    try {
+      _channel = WebSocketChannel.connect(Uri.parse(AppSecret.webSocketLink));
+      _channel.stream.listen((data) {
+        print("WebSocket Response: $data");
+      }, onError: (error) {
+        print("WebSocket Error: $error");
+      });
+    } catch (e) {
+      print("WebSocket Connection Failed: $e");
+    }
+  }
+
+  // Send location updates to WebSocket
+  void _sendLocationUpdate(LatLng location) {
+    final message = jsonEncode({
+      'busId': context.read<AppUserCubit>().driverUser!.busNo,
+      'lat': location.latitude,
+      'lng': location.longitude,
+    });
+    _channel.sink.add(message);
+  }
+
+  // Get real-time location updates
+  void getLocationUpdates() async {
+    final location = locationService.Location();
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
+        setState(() {
+          isPermissionGranted = false;
+        });
+        showSnackBar(context: context, text: "Enable location services!");
+        return;
+      }
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          isPermissionGranted = false;
+        });
+        showSnackBar(context: context, text: "Location permission required!");
+        return;
+      }
+    }
+
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+      ),
+    ).listen((Position position) {
+      setState(() {
+        currentLatLng = LatLng(position.latitude, position.longitude);
+      });
+
+      if (isOnline) {
+        print("Location Update: ${position.latitude}, ${position.longitude}");
+        _sendLocationUpdate(currentLatLng!);
+      }
+
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLng(currentLatLng!),
+      );
     });
   }
 
-  // Google Maps widget to show bus location
   Widget _buildGoogleMap() {
     return GoogleMap(
       initialCameraPosition: CameraPosition(
-        target: currentlatLng ?? LatLng(0, 0), // Default location if no data
+        target: currentLatLng ?? LatLng(0, 0),
         zoom: 15,
       ),
       onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
       },
-      markers: currentlatLng != null
+      markers: currentLatLng != null
           ? {
               Marker(
-                icon: AssetMapBitmap(AppImg.busIcon, imagePixelRatio: 1.9),
                 markerId: MarkerId(
-                    "bus${context.read<AppUserCubit>().driverUser!.busNo}"), // Marker ID
-                position: currentlatLng!, // Bus current location
+                    "bus${context.read<AppUserCubit>().driverUser!.busNo}"),
+                position: currentLatLng!,
+                icon: AssetMapBitmap(AppImg.busIcon, imagePixelRatio: 1.9),
                 infoWindow: InfoWindow(
                     title:
                         "Bus ${context.read<AppUserCubit>().driverUser!.busNo}"),
@@ -156,15 +157,18 @@ class _DriverHomePageState extends State<DriverHomePage> {
     final width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        title: Text("Bus Tracker",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(
+          "Bus Tracker",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: AppColors.primaryColor,
         actions: [
           IconButton(
-              onPressed: () {
-                context.read<AuthBloc>().add(AuthUserLogout());
-              },
-              icon: Icon(Icons.logout_rounded))
+            onPressed: () {
+              context.read<AuthBloc>().add(AuthUserLogout());
+            },
+            icon: Icon(Icons.logout_rounded),
+          )
         ],
       ),
       body: Padding(
@@ -184,18 +188,14 @@ class _DriverHomePageState extends State<DriverHomePage> {
                               fontWeight: FontWeight.bold,
                               fontSize: width / 30),
                         ),
-                        const SizedBox(
-                          width: 5,
-                        ),
+                        const SizedBox(width: 5),
                         Icon(
-                          !isOnline
-                              ? Icons.toggle_on_rounded
-                              : Icons.toggle_off_rounded,
-                          color: !isOnline ? AppColors.primaryColor : null,
+                          isOnline
+                              ? Icons.toggle_off_rounded
+                              : Icons.toggle_on_rounded,
+                          color: isOnline ? null : AppColors.primaryColor,
                         ),
-                        const SizedBox(
-                          width: 5,
-                        ),
+                        const SizedBox(width: 5),
                         Text(
                           isOnline
                               ? "you don't share the location."
@@ -203,7 +203,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: width / 30),
-                        )
+                        ),
                       ],
                     ),
                     const Divider(),
@@ -212,40 +212,23 @@ class _DriverHomePageState extends State<DriverHomePage> {
                       children: [
                         Text(
                           isOnline ? "Online" : "Offline",
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 17),
                         ),
                         GestureDetector(
                           onTap: () {
                             if (isOnline) {
-                              setState(() {
-                                isOnline = false;
-                              });
-
-                              _mapController.animateCamera(
-                                CameraUpdate.zoomOut(),
-                              );
-                            } else {
-                              if (currentlatLng != null) {
-                                setState(() {
-                                  isOnline = true;
-                                });
-                                _mapController.animateCamera(
+                              _mapController?.animateCamera(
                                   CameraUpdate.newLatLngZoom(
-                                      currentlatLng!, 18),
-                                );
-                                // Send initial location when the driver goes online
-                                _sendLocationUpdate();
-
-                                // Periodically update location every 5 seconds
-                                Timer.periodic(Duration(seconds: 1), (timer) {
-                                  if (isOnline) {
-                                    _sendLocationUpdate();
-                                  } else {
-                                    timer.cancel();
-                                  }
-                                });
-                              }
+                                      currentLatLng!, 18));
+                            }
+                            setState(() {
+                              isOnline = !isOnline;
+                            });
+                            if (isOnline) {
+                              _mapController?.animateCamera(
+                                  CameraUpdate.newLatLngZoom(
+                                      currentLatLng!, 18));
                             }
                           },
                           child: Icon(
@@ -255,7 +238,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
                             size: 50,
                             color: isOnline ? AppColors.primaryColor : null,
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ],
@@ -264,11 +247,11 @@ class _DriverHomePageState extends State<DriverHomePage> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: Container(
-                  decoration:
-                      BoxDecoration(borderRadius: BorderRadius.circular(20)),
-                  child: _buildGoogleMap()), // Show the Google Map here
-            ),
+                child: isPermissionGranted
+                    ? currentLatLng == null
+                        ? Loader()
+                        : _buildGoogleMap()
+                    : Text("Location permission required!")),
           ],
         ),
       ),
