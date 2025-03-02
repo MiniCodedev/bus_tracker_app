@@ -11,7 +11,7 @@ class BasicField extends StatelessWidget {
   final bool isNum;
   final Widget? suffixIcon;
   final void Function(String)? onChange;
-  const BasicField({
+  BasicField({
     super.key,
     required this.controller,
     required this.icon,
@@ -23,10 +23,16 @@ class BasicField extends StatelessWidget {
     this.onChange,
   });
 
+  final FocusNode _focusNode = FocusNode();
+
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      focusNode: _focusNode,
       onChanged: onChange,
+      onTapOutside: (event) {
+        _focusNode.unfocus();
+      },
       keyboardType: isNum ? TextInputType.number : TextInputType.text,
       inputFormatters: [
         if (isNum) FilteringTextInputFormatter.digitsOnly,

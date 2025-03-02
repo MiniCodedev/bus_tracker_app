@@ -9,6 +9,7 @@ import 'package:bus_tracker_app/core/utils/show_snackbar.dart';
 import 'package:bus_tracker_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart' as locationService;
@@ -29,6 +30,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
   StreamSubscription<Position>? _positionStream;
   GoogleMapController? _mapController;
   bool isPermissionGranted = true;
+  List<LatLng> polylineCoordinates = [];
 
   @override
   void initState() {
@@ -79,6 +81,28 @@ class _DriverHomePageState extends State<DriverHomePage> {
     _channel.sink.add(message);
   }
 
+  void getPolyPoints() async {
+    PolylinePoints polylinePoints = PolylinePoints();
+
+    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        googleApiKey: AppSecret.googleApiKey,
+        request: PolylineRequest(
+            destination: PointLatLng(12.866431981114607, 80.22047084231708),
+            origin:
+                PointLatLng(currentLatLng!.latitude, currentLatLng!.longitude),
+            mode: TravelMode.driving));
+
+    if (result.points.isNotEmpty) {
+      for (var point in result.points) {
+        polylineCoordinates.add(
+          LatLng(point.latitude, point.longitude),
+        );
+      }
+    }
+
+    setState(() {});
+  }
+
   // Get real-time location updates
   void getLocationUpdates() async {
     final location = locationService.Location();
@@ -119,6 +143,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
       if (isOnline) {
         print("Location Update: ${position.latitude}, ${position.longitude}");
         _sendLocationUpdate(currentLatLng!);
+        // getPolyPoints();
       }
 
       _mapController?.animateCamera(
@@ -130,12 +155,13 @@ class _DriverHomePageState extends State<DriverHomePage> {
   Widget _buildGoogleMap() {
     return GoogleMap(
       initialCameraPosition: CameraPosition(
-        target: currentLatLng ?? LatLng(0, 0),
+        target: currentLatLng ?? LatLng(12.866431981114607, 80.22047084231708),
         zoom: 15,
       ),
       onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
       },
+      zoomControlsEnabled: false,
       markers: currentLatLng != null
           ? {
               Marker(
@@ -146,6 +172,13 @@ class _DriverHomePageState extends State<DriverHomePage> {
                 infoWindow: InfoWindow(
                     title:
                         "Bus ${context.read<AppUserCubit>().driverUser!.busNo}"),
+              ),
+              Marker(
+                markerId: MarkerId("Jpr Engineering College"),
+                position: LatLng(12.866431981114607, 80.22047084231708),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueOrange),
+                infoWindow: InfoWindow(title: "Jpr Engineering College"),
               ),
             }
           : {},
@@ -173,87 +206,94 @@ class _DriverHomePageState extends State<DriverHomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
-        child: Column(
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          isOnline ? "If you go offline" : "Go online",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: width / 30),
-                        ),
-                        const SizedBox(width: 5),
-                        Icon(
-                          isOnline
-                              ? Icons.toggle_off_rounded
-                              : Icons.toggle_on_rounded,
-                          color: isOnline ? null : AppColors.primaryColor,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          isOnline
-                              ? "you don't share the location."
-                              : "to share location.",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: width / 30),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isOnline ? "Online" : "Offline",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 17),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            if (isOnline) {
-                              _mapController?.animateCamera(
-                                  CameraUpdate.newLatLngZoom(
-                                      currentLatLng!, 18));
-                            }
-                            setState(() {
-                              isOnline = !isOnline;
-                            });
-                            if (isOnline) {
-                              _mapController?.animateCamera(
-                                  CameraUpdate.newLatLngZoom(
-                                      currentLatLng!, 18));
-                            }
-                          },
-                          child: Icon(
-                            isOnline
-                                ? Icons.toggle_on_rounded
-                                : Icons.toggle_off_rounded,
-                            size: 50,
-                            color: isOnline ? AppColors.primaryColor : null,
+        child: isPermissionGranted
+            ? currentLatLng == null
+                ? Loader()
+                : Column(
+                    children: [
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    isOnline
+                                        ? "If you go offline"
+                                        : "Go online",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: width / 30),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Icon(
+                                    isOnline
+                                        ? Icons.toggle_off_rounded
+                                        : Icons.toggle_on_rounded,
+                                    color: isOnline
+                                        ? null
+                                        : AppColors.primaryColor,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    isOnline
+                                        ? "you don't share the location."
+                                        : "to share location.",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: width / 30),
+                                  ),
+                                ],
+                              ),
+                              const Divider(),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    isOnline ? "Online" : "Offline",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (isOnline) {
+                                        _mapController?.animateCamera(
+                                            CameraUpdate.newLatLngZoom(
+                                                currentLatLng!, 18));
+                                      }
+                                      setState(() {
+                                        isOnline = !isOnline;
+                                      });
+                                      if (isOnline) {
+                                        _mapController?.animateCamera(
+                                            CameraUpdate.newLatLngZoom(
+                                                currentLatLng!, 18));
+                                      }
+                                    },
+                                    child: Icon(
+                                      isOnline
+                                          ? Icons.toggle_on_rounded
+                                          : Icons.toggle_off_rounded,
+                                      size: 50,
+                                      color: isOnline
+                                          ? AppColors.primaryColor
+                                          : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-                child: isPermissionGranted
-                    ? currentLatLng == null
-                        ? Loader()
-                        : _buildGoogleMap()
-                    : Text("Location permission required!")),
-          ],
-        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(child: _buildGoogleMap()),
+                    ],
+                  )
+            : Center(child: Text("Location permission required!")),
       ),
     );
   }

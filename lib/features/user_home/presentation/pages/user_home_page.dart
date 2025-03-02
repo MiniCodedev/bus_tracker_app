@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:bus_tracker_app/core/assets/app_img.dart';
 import 'package:bus_tracker_app/core/secret/app_secret.dart';
+import 'package:bus_tracker_app/core/utils/loader.dart';
 import 'package:bus_tracker_app/core/utils/show_snackbar.dart';
 import 'package:bus_tracker_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +29,7 @@ class _UserHomePageState extends State<UserHomePage> {
   void initState() {
     super.initState();
     channel = WebSocketChannel.connect(Uri.parse(AppSecret.webSocketLink));
+    busNocontroller.text = "8";
     // Listen for incoming WebSocket messages
     channel.stream.listen((message) {
       final Map data = jsonDecode(message);
@@ -46,6 +48,7 @@ class _UserHomePageState extends State<UserHomePage> {
               infoWindow: InfoWindow(title: "Bus $busId"),
             ));
           });
+          _searchBus();
         }
       });
     });
@@ -82,39 +85,41 @@ class _UserHomePageState extends State<UserHomePage> {
               icon: Icon(Icons.logout))
         ],
       ),
-      body: Column(
-        children: [
-          // Text field for entering bus number
-          Padding(
-            padding: const EdgeInsets.all(15.0),
-            child: BasicField(
-              isNum: true,
-              suffixIcon: IconButton(
-                onPressed: _searchBus,
-                icon: Icon(Icons.search),
-              ),
-              controller: busNocontroller,
-              icon: Icons.directions_bus_rounded,
-              hintText: "Enter Bus Number",
+      body: busPositions == {}
+          ? Loader()
+          : Column(
+              children: [
+                // Text field for entering bus number
+                Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: BasicField(
+                    isNum: true,
+                    suffixIcon: IconButton(
+                      onPressed: _searchBus,
+                      icon: Icon(Icons.search),
+                    ),
+                    controller: busNocontroller,
+                    icon: Icons.directions_bus_rounded,
+                    hintText: "Enter Bus Number",
+                  ),
+                ),
+                Text("busPositions: $busPositions"),
+                // Google Map displaying buses' positions
+                Expanded(
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(12.866431981114607, 80.22047084231708),
+                      zoom: 14,
+                    ),
+                    zoomControlsEnabled: false,
+                    markers: busMarkers,
+                    onMapCreated: (controller) {
+                      mapController = controller;
+                    },
+                  ),
+                ),
+              ],
             ),
-          ),
-          Text("busPositions: $busPositions"),
-          // Google Map displaying buses' positions
-          Expanded(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: LatLng(
-                    12.9716, 77.5946), // Default position (e.g., Bangalore)
-                zoom: 14,
-              ),
-              markers: busMarkers,
-              onMapCreated: (controller) {
-                mapController = controller;
-              },
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
